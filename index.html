@@ -67,7 +67,11 @@ select, input, textarea { width: 100%; padding: 12px; margin: 8px 0 16px; border
     <select id="projectSelect"></select>
     <label>備考</label>
     <textarea id="notes" rows="2"></textarea>
-    <button class="btn-primary" onclick="submitRecord('貸出')">貸出を記録する</button>
+    
+    <div style="display: flex; gap: 10px; margin-top: 10px;">
+      <button class="btn-primary" style="flex: 1; background: #1a73e8;" onclick="submitRecord('貸出')">貸出</button>
+      <button class="btn-primary" style="flex: 1; background: #34a853;" onclick="submitRecord('返却')">返却</button>
+    </div>
     <button class="btn-primary" style="background:#f1f3f4; color:#333; margin-top:10px;" onclick="location.reload()">キャンセル</button>
   </div>
 </div>
