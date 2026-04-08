@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>工具 貸出・返却</title>
 <style>
-/* スタイル部分は以前と同じですが、カメラエリアを確実に確保します */
+/* スタイルは維持しつつ、ボタンのデザインを微調整 */
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: -apple-system, 'Hiragino Sans', sans-serif; background: #f0f2f5; color: #333; }
 .header { background: linear-gradient(135deg, #1a73e8, #0d47a1); color: white; padding: 16px; text-align: center; }
@@ -16,7 +16,6 @@ body { font-family: -apple-system, 'Hiragino Sans', sans-serif; background: #f0f
   position: relative; aspect-ratio: 1/1;
   background: #000; border-radius: 12px; overflow: hidden;
 }
-/* ビデオを背面に隠して配置（重要） */
 #video { width: 100%; height: 100%; object-fit: cover; display: block; }
 #canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; }
 #camera-trigger {
@@ -24,24 +23,24 @@ body { font-family: -apple-system, 'Hiragino Sans', sans-serif; background: #f0f
   background: rgba(0,0,0,0.9); display: flex; flex-direction: column;
   justify-content: center; align-items: center; z-index: 20; color: white;
 }
-.start-btn {
-  padding: 18px 36px; font-size: 20px; background: #1a73e8; color: white;
-  border: none; border-radius: 50px; font-weight: bold; cursor: pointer;
-}
-.scan-guide {
-  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-  width: 70%; height: 70%; border: 2px solid rgba(255,255,255,0.5); z-index: 10; pointer-events: none;
-}
-/* フォーム用スタイル */
+.start-btn { padding: 18px 36px; font-size: 20px; background: #1a73e8; color: white; border: none; border-radius: 50px; font-weight: bold; }
+.scan-guide { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 70%; height: 70%; border: 2px solid rgba(255,255,255,0.5); z-index: 10; pointer-events: none; }
+
 .card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
 select, input, textarea { width: 100%; padding: 12px; margin: 8px 0 16px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }
-.btn-primary { background: #1a73e8; color: white; border: none; padding: 14px; border-radius: 8px; width: 100%; font-weight: bold; }
-.nav-bar { position: fixed; bottom: 0; width: 100%; height: 64px; background: white; display: flex; border-top: 1px solid #ddd; }
+.btn-primary { background: #1a73e8; color: white; border: none; padding: 14px; border-radius: 8px; width: 100%; font-weight: bold; cursor: pointer; }
+.btn-finish { background: #5f6368; color: white; border: none; padding: 14px; border-radius: 8px; width: 100%; font-weight: bold; margin-top: 20px; }
+.nav-bar { position: fixed; bottom: 0; width: 100%; height: 64px; background: white; display: flex; border-top: 1px solid #ddd; z-index: 100; }
 .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; }
+
+/* 読み込み中表示 */
+#loading { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.8); z-index:1000; justify-content:center; align-items:center; flex-direction:column; }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 </head>
 <body>
+
+<div id="loading"><div>⏳ 送信中...</div></div>
 
 <div class="header"><h1>工具 貸出・返却</h1></div>
 
@@ -51,33 +50,36 @@ select, input, textarea { width: 100%; padding: 12px; margin: 8px 0 16px; border
     <canvas id="canvas"></canvas>
     <div id="camera-trigger">
         <button class="start-btn" onclick="manualStart()">カメラを起動する</button>
-        <p id="ssl-warning" style="color: #ff8a80; margin-top: 15px; font-size: 12px; display: none;">⚠️ HTTPS接続が必要です</p>
     </div>
     <div class="scan-guide"></div>
   </div>
+  <button class="btn-finish" onclick="location.reload()">入力を終了してリセット</button>
 </div>
 
 <div id="pageForm" class="page">
   <div class="card">
     <h3 id="displayName">工具名</h3>
     <p id="displayId" style="color:#666; font-size:12px; margin-bottom:15px;"></p>
+    
     <label>担当者</label>
     <select id="employeeSelect"></select>
+    
     <label>工事件名</label>
     <select id="projectSelect"></select>
+    
     <label>備考</label>
-    <textarea id="notes" rows="2"></textarea>
+    <textarea id="notes" rows="2" placeholder="破損、汚染、不具合などあれば記入"></textarea>
     
     <div style="display: flex; gap: 10px; margin-top: 10px;">
       <button class="btn-primary" style="flex: 1; background: #1a73e8;" onclick="submitRecord('貸出')">貸出</button>
       <button class="btn-primary" style="flex: 1; background: #34a853;" onclick="submitRecord('返却')">返却</button>
     </div>
-    <button class="btn-primary" style="background:#f1f3f4; color:#333; margin-top:10px;" onclick="location.reload()">キャンセル</button>
+    <button class="btn-primary" style="background:#f1f3f4; color:#333; margin-top:10px;" onclick="showPage('pageScan'); scanning=true; tick();">スキャンに戻る</button>
   </div>
 </div>
 
 <div id="pageList" class="page">
-    <input type="text" id="searchInput" placeholder="検索..." oninput="filterTools()">
+    <input type="text" id="searchInput" placeholder="工具番号や名前で検索..." oninput="filterTools()">
     <div id="toolListContainer"></div>
 </div>
 
@@ -87,7 +89,8 @@ select, input, textarea { width: 100%; padding: 12px; margin: 8px 0 16px; border
 </div>
 
 <script>
-const GAS_URL = "https://script.google.com/macros/s/AKfycbzVxxzLpmcwsBwQbuDNBRy-1mJyf6sJAlq-dhoecs1aNoVmgF30d23ltE6BIv-67vw_/exec"; // ←ここを書き換えてください
+// --- 設定 ---
+const GAS_URL = "あなたのGASのURL"; // 貼り替えてください
 
 let masterData = { employees: [], projects: [], tools: [] };
 let video = document.getElementById("video");
@@ -96,16 +99,13 @@ let canvas = canvasElement.getContext("2d");
 let scanning = false;
 let currentTool = null;
 
-// HTTPSチェック
-if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
-    document.getElementById('ssl-warning').style.display = 'block';
-}
-
+// 初期化
 async function init() {
   try {
     const res = await fetch('master_data.json');
     masterData = await res.json();
     
+    // プルダウン作成
     const empSelect = document.getElementById('employeeSelect');
     masterData.employees.forEach(e => {
         let opt = document.createElement('option');
@@ -130,14 +130,12 @@ async function manualStart() {
             video: { facingMode: "environment" } 
         });
         video.srcObject = stream;
-        // iOS/Android向けに再生を確実に
         video.setAttribute("playsinline", true); 
         await video.play();
         scanning = true;
         requestAnimationFrame(tick);
     } catch (err) {
-        alert("カメラの起動に失敗しました。設定でカメラ許可を確認し、HTTPSでアクセスしているか見てください。\nエラー: " + err);
-        document.getElementById('camera-trigger').style.display = 'flex';
+        alert("カメラ起動エラー: " + err);
     }
 }
 
@@ -171,7 +169,11 @@ function handleQRResult(toolId) {
   showPage('pageForm');
 }
 
+// 登録処理
 async function submitRecord(type) {
+  const loading = document.getElementById('loading');
+  loading.style.display = 'flex';
+
   const data = {
     type: type,
     toolId: currentTool.id,
@@ -181,24 +183,35 @@ async function submitRecord(type) {
     notes: document.getElementById('notes').value
   };
 
-  alert("送信を開始します。しばらくお待ちください...");
   try {
     await fetch(GAS_URL, {
       method: "POST",
       mode: "no-cors",
       body: JSON.stringify(data)
     });
-    alert("記録しました！");
-    location.reload();
-  } catch (err) { alert("送信エラー"); }
+    
+    // 送信成功後の処理
+    loading.style.display = 'none';
+    alert(type + " を記録しました！次の工具をスキャンしてください。");
+    
+    // 備考だけクリアして、スキャン画面に戻る
+    document.getElementById('notes').value = ''; 
+    showPage('pageScan');
+    scanning = true;
+    requestAnimationFrame(tick);
+    
+  } catch (err) { 
+    loading.style.display = 'none';
+    alert("送信エラーが発生しました。"); 
+  }
 }
 
 function renderToolList(filter = "") {
   const container = document.getElementById('toolListContainer');
   const filtered = masterData.tools.filter(t => t.id.includes(filter) || t.name.includes(filter));
   container.innerHTML = filtered.slice(0, 50).map(t => `
-    <div style="padding:10px; border-bottom:1px solid #eee;" onclick="handleQRResult('${t.id}')">
-      <b>${t.id}</b><br>${t.name}
+    <div style="padding:15px; border-bottom:1px solid #eee; background:white;" onclick="handleQRResult('${t.id}')">
+      <b style="color:#1a73e8;">${t.id}</b><br><span style="font-size:14px;">${t.name}</span>
     </div>
   `).join('');
 }
