@@ -91,6 +91,7 @@ select, input, textarea { width: 100%; padding: 12px; margin: 8px 0 16px; border
 <script>
 // --- 設定 ---
 const GAS_URL = "https://script.google.com/macros/s/AKfycbzVxxzLpmcwsBwQbuDNBRy-1mJyf6sJAlq-dhoecs1aNoVmgF30d23ltE6BIv-67vw_/exec"; // 貼り替えてください
+const successSound = new Audio('001_四国めたん（ノーマル）_登録しました.wav'); // 音声ファイルを読み込み
 
 let masterData = { employees: [], projects: [], tools: [] };
 let video = document.getElementById("video");
@@ -169,7 +170,7 @@ function handleQRResult(toolId) {
   showPage('pageForm');
 }
 
-// 登録処理
+// 登録処理（修正版）
 async function submitRecord(type) {
   const loading = document.getElementById('loading');
   loading.style.display = 'flex';
@@ -190,11 +191,13 @@ async function submitRecord(type) {
       body: JSON.stringify(data)
     });
     
-    // 送信成功後の処理
+    // --- ここで音を鳴らす！ ---
+    successSound.play().catch(e => console.log("音声再生エラー:", e));
+    
     loading.style.display = 'none';
     alert(type + " を記録しました！次の工具をスキャンしてください。");
     
-    // 備考だけクリアして、スキャン画面に戻る
+    // 以下、元の処理と同じ
     document.getElementById('notes').value = ''; 
     showPage('pageScan');
     scanning = true;
